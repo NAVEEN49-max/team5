@@ -1,0 +1,72 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adaptive Intelligent Traffic Network</title>
+<style>
+:root{--bg:#0b1020;--card:#131a30;--ink:#e8ecf8;--mut:#8b95b5;--ok:#3ddc97;--bad:#ff5d73;--acc:#5ab0ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px system-ui,sans-serif}
+header{padding:14px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;border-bottom:1px solid #222b4a}
+h1{font-size:18px;margin:0 12px 0 0}button,select{background:#1b2547;color:var(--ink);border:1px solid #2c3866;border-radius:8px;padding:7px 12px;cursor:pointer}
+button.on{background:var(--acc);color:#001;border-color:var(--acc)}button:hover{filter:brightness(1.2)}
+main{padding:16px 20px;display:grid;gap:14px;grid-template-columns:1fr 1fr}.card{background:var(--card);border-radius:12px;padding:12px}
+.card h2{font-size:13px;margin:0 0 8px;color:var(--mut);letter-spacing:.05em;text-transform:uppercase}canvas{width:100%;height:auto;display:block}
+.full{grid-column:1/-1}table{width:100%;border-collapse:collapse}td,th{padding:6px 8px;text-align:right;border-bottom:1px solid #222b4a}th:first-child,td:first-child{text-align:left}
+.g{color:var(--ok)}.r{color:var(--bad)}.score{font-size:44px;font-weight:700;color:var(--ok)}.log div{color:var(--mut);padding:2px 0;font-family:monospace;font-size:12px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}@media(max-width:900px){main{grid-template-columns:1fr}}
+</style></head><body><div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+const h=React.createElement,{useState,useEffect,useRef}=React,N=4,W=520,PAD=50,SP=(W-2*PAD)/(N-1);
+const P=n=>[PAD+(n%N)*SP,PAD+Math.floor(n/N)*SP];
+const SC=[["normal","Normal"],["surge","Traffic Surge"],["closure","Road Closure"],["emergency","Emergency"],["multiple","Multiple Events"]];
+const api=(p,m="POST",b)=>fetch("/api/"+p,{method:m,headers:{"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+
+function geo(e){const [x1,y1]=P(e.u),[x2,y2]=P(e.v),dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),ox=-dy/L*6,oy=dx/L*6;return{x1:x1+ox,y1:y1+oy,x2:x2+ox,y2:y2+oy,dx:dx/L,dy:dy/L}}
+function draw(ctx,v,pathHi){
+  ctx.clearRect(0,0,W,W);
+  for(const e of v.edges){const g=geo(e);ctx.lineWidth=6;ctx.lineCap="round";
+    ctx.strokeStyle=e.closed?"#444":`hsl(${120*(1-Math.min(1,e.pred))},75%,42%)`;ctx.setLineDash(e.closed?[6,6]:[]);
+    ctx.beginPath();ctx.moveTo(g.x1,g.y1);ctx.lineTo(g.x2,g.y2);ctx.stroke();ctx.setLineDash([]);
+    if(e.closed){const mx=(g.x1+g.x2)/2,my=(g.y1+g.y2)/2;ctx.fillStyle="#ff5d73";ctx.font="bold 16px sans-serif";ctx.fillText("✕",mx-5,my+5)}
+    ctx.fillStyle="#fff";
+    for(const p of e.mv){ctx.beginPath();ctx.arc(g.x1+(g.x2-g.x1)*p*.82,g.y1+(g.y2-g.y1)*p*.82,2.3,0,7);ctx.fill()}
+    for(let k=0;k<Math.min(e.q,12);k++){const p=.9-k*.045;ctx.fillStyle="#ffd166";ctx.beginPath();ctx.arc(g.x1+(g.x2-g.x1)*p,g.y1+(g.y2-g.y1)*p,2.6,0,7);ctx.fill()}
+    if(e.amb){const mx=g.x1+(g.x2-g.x1)*.6,my=g.y1+(g.y2-g.y1)*.6;ctx.fillStyle="#ff2b4a";ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(mx,my,7,0,7);ctx.fill();ctx.stroke()}}
+  if(v.ambpath.length){ctx.strokeStyle="rgba(90,176,255,.9)";ctx.lineWidth=3;ctx.setLineDash([4,4]);for(const p of v.ambpath){ctx.beginPath();p.forEach((n,i)=>{const [x,y]=P(n);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}ctx.setLineDash([])}
+  v.sig.forEach(([ph,yel],n)=>{const [x,y]=P(n),ns=!yel&&ph==0,ew=!yel&&ph==1,c=o=>yel?"#ffd166":o?"#3ddc97":"#ff5d73";
+    ctx.fillStyle="#0b1020";ctx.fillRect(x-11,y-11,22,22);ctx.fillStyle=c(ns);ctx.fillRect(x-3,y-11,6,5);ctx.fillRect(x-3,y+6,6,5);
+    ctx.fillStyle=c(ew);ctx.fillRect(x-11,y-3,5,6);ctx.fillRect(x+6,y-3,5,6)});
+}
+function Map({v,title,onEdge}){const r=useRef();
+  useEffect(()=>{if(v)draw(r.current.getContext("2d"),v)},[v]);
+  const click=ev=>{if(!onEdge)return;const b=r.current.getBoundingClientRect(),s=W/b.width,x=(ev.clientX-b.left)*s,y=(ev.clientY-b.top)*s;
+    let best=null,bd=14;for(const e of v.edges){const g=geo(e),mx=(g.x1+g.x2)/2,my=(g.y1+g.y2)/2,d=Math.hypot(mx-x,my-y);if(d<bd){bd=d;best=e}}if(best)onEdge(best)};
+  return h("div",{className:"card"},h("h2",null,title),h("canvas",{ref:r,width:W,height:W,onClick:click}))}
+function Spark({a,b}){const m=Math.max(10,...a,...b),pts=s=>s.map((y,i)=>`${i*(300/120)},${60-y/m*56}`).join(" ");
+  return h("svg",{viewBox:"0 0 300 64",width:"100%"},h("polyline",{points:pts(b),fill:"none",stroke:"#ff5d73",strokeWidth:2}),h("polyline",{points:pts(a),fill:"none",stroke:"#3ddc97",strokeWidth:2}))}
+function Row({k,a,b,lower=true,u=""}){const better=a==null||b==null?null:(lower?a<b:a>b),d=a!=null&&b?Math.round((1-a/b)*100*(lower?1:-1)):null;
+  return h("tr",null,h("td",null,k),h("td",{className:better?"g":""},a??"—",u),h("td",null,b??"—",u),h("td",{className:d>0?"g":d<0?"r":""},d==null?"—":(d>0?"▲ ":"▼ ")+Math.abs(d)+"%"))}
+function Route(){const [s,setS]=useState(12),[d,setD]=useState(3),[r,setR]=useState(null);
+  const go=()=>api(`route?src=${s}&dst=${d}`,"GET").then(setR),opts=[...Array(16).keys()].map(i=>h("option",{key:i,value:i},`J${i} (r${Math.floor(i/4)+1},c${i%4+1})`));
+  return h("div",null,h("div",{className:"row"},"From",h("select",{value:s,onChange:e=>setS(+e.target.value)},opts),"To",h("select",{value:d,onChange:e=>setD(+e.target.value)},opts),h("button",{onClick:go},"Recommend route")),
+    r&&h("p",null,"AI route: ",h("b",{className:"g"},r.adaptive.path?r.adaptive.path.map(n=>"J"+n).join(" → ")+` (ETA ${r.adaptive.eta}s)`:"no route"),h("br"),"Static shortest: ",r.static.path?r.static.path.map(n=>"J"+n).join(" → ")+` (free-flow ${r.static.eta}s)`:"no route"))}
+function App(){const [s,setS]=useState(null);
+  useEffect(()=>{const f=()=>api("state","GET").then(setS).catch(()=>{});f();const id=setInterval(f,250);return()=>clearInterval(id)},[]);
+  if(!s)return h("p",{style:{padding:20}},"Connecting to backend…");
+  const A=s.a.stats,B=s.b.stats,toggle=e=>api("incident",undefined,{u:e.u,v:e.v,closed:!e.closed});
+  return h("div",null,h("header",null,h("h1",null,"🚦 Adaptive Intelligent Traffic Network"),
+    SC.map(([k,l])=>h("button",{key:k,className:s.scenario==k?"on":"",onClick:()=>api("scenario/"+k)},l)),
+    h("span",{style:{flex:1}}),[1,4,12,30].map(n=>h("button",{key:n,className:s.speed==n?"on":"",onClick:()=>api("speed/"+n)},`${n*4}x`)),
+    h("button",{onClick:()=>api("pause")},s.paused?"▶ Resume":"⏸ Pause"),h("button",{onClick:()=>api("reset")},"Reset")),
+    h("main",null,
+      h(Map,{v:s.a,title:"Adaptive AI — max-pressure signals · live routing · green corridor (click a road to close/open)",onEdge:toggle}),
+      h(Map,{v:s.b,title:"Baseline — fixed-timing signals · static shortest path"}),
+      h("div",{className:"card"},h("h2",null,`KPIs · t = ${s.t}s`),h("table",null,h("thead",null,h("tr",null,["Metric","Adaptive","Baseline","Gain"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,h(Row,{k:"Vehicle-hours waiting",a:A.wait_vh,b:B.wait_vh}),h(Row,{k:"Avg delay / trip",a:A.avg_delay,b:B.avg_delay,u:"s"}),h(Row,{k:"Trips completed",a:A.done,b:B.done,lower:false}),
+          h(Row,{k:"Vehicles queued now",a:A.queued,b:B.queued}),h(Row,{k:"Ambulance travel time",a:A.amb,b:B.amb,u:"s"})))),
+      h("div",{className:"card"},h("h2",null,"Network optimization score"),h("div",{className:"row"},h("div",{className:"score"},s.score.score),
+        h("div",null,"wait ",s.score.wait,"% · delay ",s.score.delay,"% · throughput ",s.score.thru,"%",h("br"),h("small",{style:{color:"#8b95b5"}},"50 = parity with baseline · 100 = maximum"))),
+        h("h2",{style:{marginTop:10}},"Queue length over time (green = AI, red = baseline)"),h(Spark,{a:s.a.hist,b:s.b.hist})),
+      h("div",{className:"card"},h("h2",null,"Route planner (congestion-aware)"),h(Route)),
+      h("div",{className:"card log"},h("h2",null,"Event log"),s.log.slice().reverse().map((l,i)=>h("div",{key:i},l)))))}
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script></body></html>

@@ -1,0 +1,132 @@
+[
+ {
+  "scenario": "normal",
+  "seconds": 900,
+  "adaptive": {
+   "done": 2068,
+   "avg_delay": 5.1,
+   "wait_vh": 2.83,
+   "in_net": 139,
+   "queued": 12,
+   "amb": null
+  },
+  "baseline": {
+   "done": 1976,
+   "avg_delay": 40.7,
+   "wait_vh": 17.61,
+   "in_net": 212,
+   "queued": 139,
+   "amb": null
+  },
+  "score": {
+   "score": 85,
+   "wait": 84,
+   "delay": 87,
+   "thru": 5
+  }
+ },
+ {
+  "scenario": "surge",
+  "seconds": 900,
+  "adaptive": {
+   "done": 3450,
+   "avg_delay": 14.5,
+   "wait_vh": 16.74,
+   "in_net": 240,
+   "queued": 62,
+   "amb": null
+  },
+  "baseline": {
+   "done": 1659,
+   "avg_delay": 238.4,
+   "wait_vh": 220.99,
+   "in_net": 270,
+   "queued": 1983,
+   "amb": null
+  },
+  "score": {
+   "score": 98,
+   "wait": 92,
+   "delay": 94,
+   "thru": 108
+  }
+ },
+ {
+  "scenario": "closure",
+  "seconds": 900,
+  "adaptive": {
+   "done": 2052,
+   "avg_delay": 4.1,
+   "wait_vh": 3.17,
+   "in_net": 155,
+   "queued": 23,
+   "amb": null
+  },
+  "baseline": {
+   "done": 1636,
+   "avg_delay": 121.4,
+   "wait_vh": 51.75,
+   "in_net": 251,
+   "queued": 504,
+   "amb": null
+  },
+  "score": {
+   "score": 91,
+   "wait": 94,
+   "delay": 97,
+   "thru": 25
+  }
+ },
+ {
+  "scenario": "emergency",
+  "seconds": 900,
+  "adaptive": {
+   "done": 2062,
+   "avg_delay": 4.4,
+   "wait_vh": 2.65,
+   "in_net": 146,
+   "queued": 16,
+   "amb": 90
+  },
+  "baseline": {
+   "done": 1974,
+   "avg_delay": 43.4,
+   "wait_vh": 18.09,
+   "in_net": 215,
+   "queued": 144,
+   "amb": 103
+  },
+  "score": {
+   "score": 85,
+   "wait": 85,
+   "delay": 90,
+   "thru": 4
+  }
+ },
+ {
+  "scenario": "multiple",
+  "seconds": 900,
+  "adaptive": {
+   "done": 3261,
+   "avg_delay": 43.4,
+   "wait_vh": 37.07,
+   "in_net": 428,
+   "queued": 236,
+   "amb": 91
+  },
+  "baseline": {
+   "done": 1530,
+   "avg_delay": 222.3,
+   "wait_vh": 243.16,
+   "in_net": 271,
+   "queued": 2107,
+   "amb": 639
+  },
+  "score": {
+   "score": 95,
+   "wait": 85,
+   "delay": 80,
+   "thru": 113
+  }
+ }
+]
